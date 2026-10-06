@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador de atendimento com IA | Nutricionista Juliana Leanza</title>
+<meta name="description" content="Demonstração de um agente de IA atendendo pacientes da nutricionista Juliana Leanza pelo WhatsApp.">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#17100d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+:root{
+  --espresso:#17100d;--cocoa:#241913;--bark:#3b2b21;--cream:#efe4d3;--oat:#c9baa6;--copper:#c98f58;
+  --line:rgba(239,228,211,.16);
+  --chat-bg:#efe7dc;--in:#ffffff;--out:#dff0c8;--ink:#1d1512;--meta:#6f6258;--bar:#2a1e18;
+  --display:"Archivo","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --text:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --serif:"Instrument Serif","Iowan Old Style",Georgia,serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--espresso);color:var(--cream);font-family:var(--text);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
+.stage{min-height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:clamp(24px,5vw,80px);align-items:center;max-width:1180px;margin:0 auto;padding:clamp(20px,4vw,56px)}
+
+/* painel de apresentação */
+.pitch h1{font-family:var(--display);font-stretch:68%;font-weight:800;text-transform:uppercase;line-height:.94;font-size:clamp(2.4rem,5.4vw,4.6rem);margin:0}
+.pitch .lede{font-family:var(--serif);font-size:clamp(1.25rem,2vw,1.6rem);line-height:1.3;margin:20px 0 0;max-width:30ch}
+.does{margin:32px 0 0;padding:0;list-style:none;border-top:1px solid var(--line);max-width:46ch}
+.does li{padding:14px 0;border-bottom:1px solid var(--line);color:var(--oat)}
+.does strong{color:var(--cream);font-weight:600;display:block}
+.tries{margin-top:28px}
+.tries p{margin:0 0 10px;color:var(--oat);font-size:.93rem}
+.tries div{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:transparent;color:var(--cream);border:1px solid var(--line);border-radius:999px;padding:9px 16px;font-size:.93rem;min-height:40px}
+.chip:hover{border-color:var(--cream)}
+.note{margin-top:28px;font-size:.86rem;color:var(--oat);max-width:48ch}
+
+/* telefone */
+.phone{width:100%;max-width:420px;height:min(760px,calc(100vh - 64px));min-height:520px;margin:0 auto;background:var(--chat-bg);border-radius:28px;overflow:hidden;display:flex;flex-direction:column;border:8px solid #0c0806;box-shadow:0 40px 90px rgba(0,0,0,.55)}
+.bar{background:var(--bar);color:var(--cream);display:flex;align-items:center;gap:12px;padding:12px 14px}
+.avatar{width:42px;height:42px;border-radius:50%;background:var(--copper);color:var(--espresso);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-stretch:68%;font-weight:800;font-size:1.05rem;flex:none}
+.bar-name{font-weight:600;font-size:1rem;line-height:1.2}
+.bar-status{font-size:.8rem;color:var(--oat)}
+.bar-reset{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--cream);border-radius:999px;padding:6px 12px;font-size:.8rem;min-height:36px}
+.log{flex:1;overflow-y:auto;padding:14px 12px 8px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth}
+.day{align-self:center;background:rgba(29,21,18,.08);color:var(--meta);font-size:.75rem;padding:4px 10px;border-radius:8px;margin-bottom:6px}
+.msg{max-width:84%;padding:8px 10px 6px;border-radius:10px;color:var(--ink);font-size:.95rem;line-height:1.42;white-space:pre-line;overflow-wrap:anywhere;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+.msg.in{background:var(--in);align-self:flex-start;border-top-left-radius:2px}
+.msg.out{background:var(--out);align-self:flex-end;border-top-right-radius:2px}
+.msg time{display:block;text-align:right;font-size:.68rem;color:var(--meta);margin-top:2px}
+.msg.out time::after{content:" ✓✓";color:#3b8fd0}
+.msg a{color:#0b6b52;font-weight:600}
+.typing{align-self:flex-start;background:var(--in);border-radius:10px;padding:12px 14px;display:flex;gap:4px}
+.typing i{width:7px;height:7px;border-radius:50%;background:#9a8d82;animation:blink 1.1s infinite}
+.typing i:nth-child(2){animation-delay:.18s}.typing i:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,80%,100%{opacity:.3}40%{opacity:1}}
+.quick{display:flex;flex-wrap:wrap;gap:6px;padding:6px 12px 10px}
+.quick button{background:#fff;color:#0b6b52;border:1px solid rgba(11,107,82,.35);border-radius:999px;padding:8px 14px;font-size:.88rem;font-weight:600;min-height:38px}
+.quick button:hover{background:#f1f8ee}
+.composer{display:flex;gap:8px;padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));background:#e4dacd}
+.composer input{flex:1;min-width:0;border:0;border-radius:999px;padding:12px 16px;font:inherit;font-size:.95rem;color:var(--ink);background:#fff;min-height:46px}
+.composer button{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:#0b6b52;color:#fff;display:flex;align-items:center;justify-content:center}
+.composer svg{width:20px;height:20px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+@media (max-width:880px){
+  .stage{grid-template-columns:minmax(0,1fr);padding:0;gap:0;align-items:stretch;height:100%}
+  .pitch{order:2;padding:28px 20px 40px}
+  .phone{order:1;max-width:none;height:100%;min-height:0;border-radius:0;border:0;box-shadow:none}
+  body{overflow-y:auto}
+  .stage{height:auto}
+  .phone{height:calc(100vh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+}
+@media (prefers-reduced-motion:reduce){.typing i{animation:none}.log{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <section class="pitch" aria-labelledby="titulo">
+    <h1 id="titulo">Seu WhatsApp atendendo sozinho</h1>
+    <p class="lede">Esta é uma demonstração de como um agente de IA responderia os pacientes da nutricionista Juliana Leanza, a qualquer hora.</p>
+    <ul class="does">
+      <li><strong>Responde na hora</strong>Endereço, atendimento online, formação e como funciona a consulta.</li>
+      <li><strong>Qualifica o paciente</strong>Pergunta nome, objetivo e formato antes de passar para a Juliana.</li>
+      <li><strong>Encaminha o agendamento</strong>Entrega o resumo pronto, para ela só confirmar o horário.</li>
+      <li><strong>Respeita os limites da profissão</strong>Não passa dieta nem orientação de saúde pelo chat.</li>
+    </ul>
+    <div class="tries">
+      <p>Experimente perguntar:</p>
+      <div>
+        <button class="chip" type="button" data-say="Quero agendar uma consulta">Quero agendar uma consulta</button>
+        <button class="chip" type="button" data-say="Vocês atendem online?">Vocês atendem online?</button>
+        <button class="chip" type="button" data-say="Quanto custa a consulta?">Quanto custa a consulta?</button>
+        <button class="chip" type="button" data-say="Me passa uma dieta para emagrecer">Me passa uma dieta para emagrecer</button>
+      </div>
+    </div>
+    <p class="note">Simulação para apresentação. As respostas usam dados públicos do perfil da Juliana; valores, horários e convênios entram na versão final, depois de definidos por ela. Demonstração por Push IA.</p>
+  </section>
+
+  <section class="phone" aria-label="Conversa simulada no WhatsApp">
+    <header class="bar">
+      <div class="avatar" aria-hidden="true">JL</div>
+      <div>
+        <div class="bar-name">Nutri Juliana Leanza</div>
+        <div class="bar-status" id="status">assistente virtual, online</div>
+      </div>
+      <button class="bar-reset" type="button" id="reset">Recomeçar</button>
+    </header>
+    <div class="log" id="log" role="log" aria-live="polite"></div>
+    <div class="quick" id="quick"></div>
+    <form class="composer" id="composer" autocomplete="off">
+      <label class="sr" for="campo">Escreva uma mensagem</label>
+      <input id="campo" type="text" placeholder="Escreva uma mensagem" maxlength="300" enterkeyhint="send">
+      <button type="submit" aria-label="Enviar mensagem">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 20.5 21 12 3 3.5v6.6L15 12 3 13.9z"/></svg>
+      </button>
+    </form>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DADOS = {
+    whatsapp: '5521997998736',
+    endereco: 'Estr. dos Três Rios, 830, Freguesia (Jacarepaguá), Rio de Janeiro, RJ',
+    rota: 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent('Estr. dos Três Rios, 830 - Freguesia (Jacarepaguá), Rio de Janeiro - RJ, 22745-005')
+  };
+
+  var log = document.getElementById('log');
+  var quick = document.getElementById('quick');
+  var form = document.getElementById('composer');
+  var campo = document.getElementById('campo');
+  var status = document.getElementById('status');
+  var fila = Promise.resolve();
+  var estado, lead, geracao = 0;
+
+  var MENU = ['Agendar consulta', 'Como funciona', 'Onde fica', 'Atende online?', 'Valores'];
+
+  function hora() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  function rolar() { log.scrollTop = log.scrollHeight; }
+
+  /* Mensagens: texto puro, com links opcionais montados via DOM (nada de HTML vindo do usuário) */
+  function bolha(tipo, texto, link) {
+    var el = document.createElement('div');
+    el.className = 'msg ' + tipo;
+    el.appendChild(document.createTextNode(texto));
+    if (link) {
+      el.appendChild(document.createTextNode('\n'));
+      var a = document.createElement('a');
+      a.href = link.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = link.rotulo;
+      el.appendChild(a);
+    }
+    var t = document.createElement('time');
+    t.textContent = hora();
+    el.appendChild(t);
+    log.appendChild(el);
+    rolar();
+  }
+
+  function botoes(lista) {
+    quick.textContent = '';
+    (lista || []).forEach(function (rotulo) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = rotulo;
+      b.addEventListener('click', function () { enviar(rotulo); });
+      quick.appendChild(b);
+    });
+  }
+
+  function agente(texto, opcoes) {
+    var minha = geracao;
+    opcoes = opcoes || {};
+    fila = fila.then(function () {
+      if (minha !== geracao) { return; }
+      return new Promise(function (resolve) {
+        var dig = document.createElement('div');
+        dig.className = 'typing';
+        dig.innerHTML = '<i></i><i></i><i></i>';
+        log.appendChild(dig); rolar();
+        status.textContent = 'digitando…';
+        var espera = Math.min(1500, 450 + texto.length * 9);
+        window.setTimeout(function () {
+          if (dig.parentNode) { dig.parentNode.removeChild(dig); }
+          if (minha === geracao) {
+            status.textContent = 'assistente virtual, online';
+            bolha('in', texto, opcoes.link);
+            if (opcoes.botoes) { botoes(opcoes.botoes); }
+          }
+          resolve();
+        }, espera);
+      });
+    });
+  }
+
+  function norm(s) {
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }
+  function tem(t, lista) {
+    return lista.some(function (p) { return t.indexOf(p) !== -1; });
+  }
+
+  /* Respostas por assunto */
+  var R = {
+    como: function () {
+      agente('Funciona assim:\n1. Você agenda por aqui.\n2. A consulta pode ser presencial, na Freguesia, ou online.\n3. Você recebe um plano alimentar personalizado e segue com acompanhamento da Juliana.');
+      agente('Quer que eu já encaminhe o seu agendamento?', { botoes: ['Agendar consulta', 'Onde fica', 'Valores'] });
+    },
+    local: function () {
+      agente('O consultório fica na ' + DADOS.endereco + '.', { link: { url: DADOS.rota, rotulo: 'Abrir rota no Google Maps' }, botoes: ['Agendar consulta', 'Atende online?'] });
+    },
+    online: function () {
+      agente('Sim! A Juliana atende presencialmente na Freguesia e também online, por vídeo, com o mesmo acompanhamento.', { botoes: ['Agendar consulta', 'Como funciona'] });
+    },
+    valores: function () {
+      agente('Os valores são passados pela Juliana no momento do agendamento, de acordo com o tipo de acompanhamento.\n\n(Na versão final, eu informo aqui os valores que ela definir.)');
+      agente('Posso anotar seus dados para ela te retornar com os valores?', { botoes: ['Agendar consulta', 'Agora não'] });
+    },
+    convenio: function () {
+      agente('Essa informação eu confirmo com a Juliana.\n\n(Na versão final, eu respondo com a política de convênio e reembolso que ela definir.)', { botoes: ['Agendar consulta', 'Falar com a Juliana'] });
+    },
+    horario: function () {
+      agente('Os horários disponíveis são confirmados pela Juliana no agendamento.\n\n(Na versão final, eu consulto a agenda dela e já ofereço os horários livres.)', { botoes: ['Agendar consulta'] });
+    },
+    formacao: function () {
+      agente('A Juliana é nutricionista clínica, formada pelo IBMR (Instituto Brasileiro de Medicina e Reabilitação), e pós-graduada em Nutrição Esportiva pela NutMed. Ela atua com nutrição clínica e esportiva.', { botoes: ['Agendar consulta', 'Como funciona'] });
+    },
+    orientacao: function () {
+      agente('Por aqui eu não passo dieta nem orientação alimentar: isso precisa de avaliação individual, e é exatamente o que a Juliana faz na consulta.');
+      agente('Ela trabalha com emagrecimento, nutrição esportiva e acompanhamento de quem usa ou usou medicação para emagrecer com prescrição médica. Quer agendar?', { botoes: ['Agendar consulta', 'Como funciona'] });
+    },
+    urgencia: function () {
+      agente('Sinto muito que você esteja passando por isso. Eu sou um assistente virtual e não posso avaliar sintomas. Se for algo urgente, procure atendimento médico ou ligue 192 (SAMU).', { botoes: ['Falar com a Juliana'] });
+    },
+    humano: function () {
+      agente('Claro! Vou te passar direto para a Juliana.', { link: { url: 'https://wa.me/' + DADOS.whatsapp + '?text=' + encodeURIComponent('Olá, Juliana! Vim pelo atendimento virtual e gostaria de falar com você.'), rotulo: 'Abrir conversa com a Juliana' }, botoes: MENU });
+    },
+    oi: function () {
+      agente('Oi! Como posso te ajudar?', { botoes: MENU });
+    },
+    obrigado: function () {
+      agente('Eu que agradeço! Se precisar de mais alguma coisa, é só chamar.', { botoes: MENU });
+    },
+    naoSei: function () {
+      agente('Essa eu prefiro confirmar com a Juliana para não te passar informação errada. Enquanto isso, posso ajudar com estes assuntos:', { botoes: MENU.concat(['Falar com a Juliana']) });
+    }
+  };
+
+  function assunto(t) {
+    if (tem(t, ['dor forte', 'passando mal', 'emergencia', 'urgente', 'desmai'])) { return 'urgencia'; }
+    if (tem(t, ['agend', 'marcar', 'quero consulta', 'quero uma consulta', 'primeira consulta'])) { return 'agendar'; }
+    if (tem(t, ['valor', 'preco', 'quanto custa', 'custa', 'quanto e', 'investimento'])) { return 'valores'; }
+    if (tem(t, ['convenio', 'plano de saude', 'reembolso', 'unimed', 'amil', 'bradesco saude', 'sulamerica', 'aceita plano'])) { return 'convenio'; }
+    if (tem(t, ['endereco', 'onde fica', 'onde e', 'local', 'como chego', 'rota'])) { return 'local'; }
+    if (tem(t, ['online', 'video', 'a distancia', 'outra cidade', 'remot'])) { return 'online'; }
+    if (tem(t, ['como funciona', 'funciona'])) { return 'como'; }
+    if (tem(t, ['formacao', 'formada', 'especiali', 'crn', 'quem e a juliana'])) { return 'formacao'; }
+    if (tem(t, ['horario', 'que horas', 'abre', 'fecha', 'sabado'])) { return 'horario'; }
+    if (tem(t, ['dieta', 'cardapio', 'o que comer', 'posso comer', 'emagrec', 'caneta', 'mounjaro', 'ozempic', 'suplement', 'jejum', 'caloria'])) { return 'orientacao'; }
+    if (tem(t, ['falar com', 'atendente', 'humano', 'pessoa', 'juliana'])) { return 'humano'; }
+    if (tem(t, ['obrigad', 'valeu', 'agora nao'])) { return 'obrigado'; }
+    if (/^(oi+|ola|bom dia|boa tarde|boa noite|opa|e ai)\b/.test(t)) { return 'oi'; }
+    return 'naoSei';
+  }
+
+  /* Fluxo de agendamento */
+  function iniciarAgendamento() {
+    estado = 'nome'; lead = {};
+    botoes([]);
+    agente('Ótimo! Vou anotar alguns dados para a Juliana. Qual é o seu nome?');
+  }
+  function passoAgendamento(texto, t) {
+    if (tem(t, ['cancelar', 'desistir', 'deixa pra la'])) {
+      estado = 'livre';
+      agente('Sem problema, cancelei por aqui. Posso ajudar com outra coisa?', { botoes: MENU });
+      return;
+    }
+    if (estado === 'nome') {
+      var nome = texto.trim().replace(/\s+/g, ' ').slice(0, 60);
+      if (nome.length < 2 || /\d/.test(nome)) { agente('Pode me dizer só o seu nome, por favor?'); return; }
+      lead.nome = nome;
+      estado = 'objetivo';
+      agente('Prazer, ' + nome.split(' ')[0] + '! Qual é o seu principal objetivo?', { botoes: ['Emagrecimento', 'Nutrição esportiva', 'Acompanhamento com medicação', 'Relação com a comida', 'Saúde no dia a dia'] });
+      return;
+    }
+    if (estado === 'objetivo') {
+      lead.objetivo = texto.trim().slice(0, 80);
+      estado = 'formato';
+      agente('Anotado. Você prefere atendimento presencial, na Freguesia, ou online?', { botoes: ['Presencial', 'Online'] });
+      return;
+    }
+    if (estado === 'formato') {
+      if (tem(t, ['online', 'video', 'distancia'])) { lead.formato = 'Online'; }
+      else if (tem(t, ['presencial', 'freguesia', 'consultorio', 'pessoal'])) { lead.formato = 'Presencial na Freguesia'; }
+      else { agente('Pode escolher uma das duas opções?', { botoes: ['Presencial', 'Online'] }); return; }
+      estado = 'periodo';
+      agente('E qual período costuma ser melhor para você?', { botoes: ['Manhã', 'Tarde', 'Tanto faz'] });
+      return;
+    }
+    if (estado === 'periodo') {
+      lead.periodo = texto.trim().slice(0, 40);
+      estado = 'livre';
+      var resumo = 'Nome: ' + lead.nome + '\nObjetivo: ' + lead.objetivo + '\nAtendimento: ' + lead.formato + '\nMelhor período: ' + lead.periodo;
+      agente('Prontinho! Este é o resumo do seu pedido:\n\n' + resumo);
+      agente('Agora é só a Juliana confirmar o horário com você.\n\n(Nesta demonstração, o botão abaixo abre o WhatsApp dela com o resumo. Na versão final, eu consulto a agenda e confirmo o horário aqui mesmo.)', {
+        link: { url: 'https://wa.me/' + DADOS.whatsapp + '?text=' + encodeURIComponent('Olá, Juliana! Pedido de agendamento pelo atendimento virtual:\n' + resumo), rotulo: 'Enviar resumo para a Juliana' },
+        botoes: ['Onde fica', 'Como funciona']
+      });
+    }
+  }
+
+  function responder(texto) {
+    var t = norm(texto);
+    if (estado !== 'livre') { passoAgendamento(texto, t); return; }
+    var a = assunto(t);
+    if (a === 'agendar') { iniciarAgendamento(); return; }
+    R[a]();
+  }
+
+  function enviar(texto) {
+    texto = (texto || '').trim();
+    if (!texto) { return; }
+    bolha('out', texto.slice(0, 300));
+    botoes([]);
+    responder(texto);
+  }
+
+  function comecar() {
+    geracao += 1;
+    fila = Promise.resolve();
+    estado = 'livre'; lead = {};
+    log.textContent = '';
+    var dia = document.createElement('div');
+    dia.className = 'day'; dia.textContent = 'Hoje';
+    log.appendChild(dia);
+    botoes([]);
+    status.textContent = 'assistente virtual, online';
+    agente('Olá! Sou o assistente virtual da nutricionista Juliana Leanza. Respondo por aqui a qualquer hora.');
+    agente('Posso tirar dúvidas e encaminhar o seu agendamento. Como posso ajudar?', { botoes: MENU });
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = campo.value;
+    campo.value = '';
+    enviar(v);
+  });
+  document.getElementById('reset').addEventListener('click', comecar);
+  Array.prototype.forEach.call(document.querySelectorAll('[data-say]'), function (b) {
+    b.addEventListener('click', function () {
+      enviar(b.getAttribute('data-say'));
+      document.querySelector('.phone').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  comecar();
+})();
+</script>
+</body>
+</html>
